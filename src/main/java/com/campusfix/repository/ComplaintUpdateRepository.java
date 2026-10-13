@@ -10,4 +10,5 @@ import java.util.Optional;
 public interface ComplaintUpdateRepository extends JpaRepository<ComplaintUpdate, Long> {
     List<ComplaintUpdate> findByComplaintOrderByCreatedAtDesc(Complaint complaint);
     Optional<ComplaintUpdate> findByIdAndStaff(Long id, User staff);
+    boolean existsByStaff(User staff);
 }

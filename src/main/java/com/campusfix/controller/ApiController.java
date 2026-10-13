@@ -2,6 +2,9 @@ package com.campusfix.controller;
 
 import com.campusfix.model.*;
 import com.campusfix.repository.AnalyticsRepository;
+import com.campusfix.repository.ComplaintRepository;
+import com.campusfix.repository.ComplaintUpdateRepository;
+import com.campusfix.repository.NotificationRepository;
 import com.campusfix.service.*;
 import org.springframework.http.*;
 import org.springframework.security.core.Authentication;
@@ -19,10 +22,13 @@ public class ApiController {
     private final NotificationService ns;
     private final FileStorageService fs;
     private final AnalyticsRepository ar;
+    private final ComplaintRepository complaintRepository;
+    private final ComplaintUpdateRepository updateRepository;
+    private final NotificationRepository notificationRepository;
 
     public ApiController(UserService u, ComplaintService c, ComplaintUpdateService cu,
-                         NotificationService n, FileStorageService f, AnalyticsRepository a) {
-        users = u; cs = c; cus = cu; ns = n; fs = f; ar = a;
+                         NotificationService n, FileStorageService f, AnalyticsRepository a, ComplaintRepository cr, ComplaintUpdateRepository ur, NotificationRepository nr) {
+        users = u; cs = c; cus = cu; ns = n; fs = f; ar = a; complaintRepository = cr; updateRepository = ur; notificationRepository = nr;
     }
 
     // ---------------- AUTH ----------------
@@ -218,9 +224,30 @@ public class ApiController {
         return user(users.updateStaff(id, b.get("fullName"), b.get("email"), b.get("department")));
     }
 
-    @DeleteMapping("/admin/staff/{id}")
+    @PutMapping("/admin/staff/{id}/deactivate")
     public Map<String, Object> deactivateStaff(@PathVariable Long id) {
         return user(users.deactivateStaff(id));
+    }
+
+    @DeleteMapping("/admin/staff/{id}")
+    public ResponseEntity<?> deleteInactiveStaff(@PathVariable Long id) {
+        User staff = users.findStaff().stream().filter(x -> x.getId().equals(id)).findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Staff not found."));
+        users.deleteInactiveStaff(id, complaintRepository.existsByAssignedStaff(staff),
+                updateRepository.existsByStaff(staff), notificationRepository.existsByUser(staff));
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/auth/forgot-password")
+    public Map<String, Object> forgotPassword(@RequestBody Map<String, String> body) {
+        users.requestPasswordReset(body.get("email"));
+        return Map.of("success", true, "message", "If an account matches that email, password reset instructions have been sent.");
+    }
+
+    @PostMapping("/auth/reset-password")
+    public Map<String, Object> resetPassword(@RequestBody Map<String, String> body) {
+        users.resetPassword(body.get("token"), body.get("newPassword"));
+        return Map.of("success", true);
     }
 
     @PutMapping("/admin/complaints/{id}/assignment")

@@ -29,6 +29,7 @@ public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
                                                    @Param("location") String location);
 
     long countByStatus(ComplaintStatus status);
+    boolean existsByAssignedStaff(User staff);
     long countByAssignedStaffIsNull();
     List<Complaint> findByAssignedStaffIsNullOrderByCreatedAtDesc();
 }
